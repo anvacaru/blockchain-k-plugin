@@ -1,6 +1,6 @@
 #include <vector>
 #include <unistd.h>
-
+#include <iostream>
 #include "rapidjson/reader.h"
 #include "rapidjson/writer.h"
 #include "rapidjson/filereadstream.h"
@@ -154,34 +154,43 @@ struct KoreWriter : Writer<FDStream> {
 };
 
 bool write_json(KoreWriter &writer, block *data) {
+  std::cout<<"CONFIG: " << (char*) printConfigurationToString(data)<<std::endl;
   bool return_value = true;
   if (data != dotList) {
     if (data == null) {
+      std::cout << "null" <<std::endl;
       writer.Null();
     } else if (data->h.hdr == boolHdr.hdr) {
+      std::cout << "bool" <<std::endl;
       boolinj *inj = (boolinj *)data;
       writer.Bool(inj->data);
     } else if (data->h.hdr == intHdr.hdr) {
+      std::cout << "int" <<std::endl;
       zinj *inj = (zinj *)data;
       string *str = hook_STRING_int2string(inj->data);
       writer.RawNumber(str->data, len(str), false);
     } else if (data->h.hdr == strHdr.hdr) {
+      std::cout << "string" <<std::endl;
       stringinj *inj = (stringinj *)data;
       writer.String(inj->data->data, len(inj->data), false);
     } else if (data->h.hdr == objHdr.hdr) {
+     std::cout << "object" <<std::endl;
       writer.StartObject();
       json *obj = (json *)data;
       return_value = write_json(writer, (block *)obj->data);
       writer.EndObject();
     } else if (data->h.hdr == listWrapHdr.hdr) {
+      std::cout << "listWrap" <<std::endl;
       writer.StartArray();
       json *obj = (json *)data;
       return_value = write_json(writer, (block *)obj->data);
       writer.EndArray();
     } else if (data->h.hdr == listHdr.hdr) {
+      std::cout << "list" <<std::endl;
       jsonlist *list = (jsonlist *)data;
       return_value = write_json(writer, list->hd) && write_json(writer, (block *)list->tl);
     } else if (data->h.hdr == membHdr.hdr) {
+      std::cout << "jsonmember" <<std::endl; //BRB
       jsonmember *memb = (jsonmember *)data;
       stringinj *inj = (stringinj *)memb->key;
       writer.Key(inj->data->data, len(inj->data), false);
@@ -230,6 +239,7 @@ block *hook_JSON_write(block *json, mpz_ptr fd_z) {
   FDStream os(fd);
   KoreWriter writer(os);
 
+  std::cout << "writing a new json" <<std::endl;
   if (! write_json(writer, json)) {
     block * retBlock = (block *)koreAlloc(sizeof(block) + 2 * sizeof(block *));
     retBlock->h = kseqHeader;
